@@ -1,0 +1,39 @@
+{
+  "name": "@adaptive-ds/optimize-images-web",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "dependencies": {
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.11",
+    "@types/bun": "latest",
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.2"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./*.js": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
+    }
+  },
+  "description": "Process and sync web project images between local folders and R2",
+  "license": "MIT",
+  "prettier": {
+    "semi": false,
+    "printWidth": 120,
+    "trailingComma": "all"
+  },
+  "private": false,
+  "scripts": {
+    "build": "rm -rf ./dist && bun tsc -p ./tsconfig.lib.json",
+    "format": "bunx prettier --write src",
+    "release": "bun run build"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts"
+}
