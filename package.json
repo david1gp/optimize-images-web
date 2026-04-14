@@ -22,6 +22,15 @@
     }
   },
   "description": "Process and sync web project images between local folders and R2",
+  "homepage": "https://github.com/david1gp/optimize-images-web#readme",
+  "keywords": [
+    "images",
+    "image-optimization",
+    "sharp",
+    "r2",
+    "rclone",
+    "web-assets"
+  ],
   "license": "MIT",
   "prettier": {
     "semi": false,
@@ -29,10 +38,14 @@
     "trailingComma": "all"
   },
   "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/david1gp/optimize-images-web.git"
+  },
   "scripts": {
     "build": "rm -rf ./dist && bun tsc -p ./tsconfig.lib.json",
-    "format": "bunx prettier --write src",
-    "release": "bun run build"
+    "format": "bunx biome check --write src",
+    "release": "bash ops/release.sh"
   },
   "type": "module",
   "types": "./dist/index.d.ts"
