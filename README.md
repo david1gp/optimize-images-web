@@ -1,4 +1,4 @@
-# optimize-images-web
+# @adaptive-ds/assets-optimizer
 
 Process, hash, sync, and clean image assets for web projects that keep originals outside git and use R2 as the canonical store, with a separate pass for web videos.
 
@@ -15,11 +15,17 @@ It is designed for projects where:
 - optimized outputs should be deterministic and aggressively cacheable
 - output filenames should change when either the source file or the transform changes
 - old optimized files should be removed locally and remotely
-- a separate image-list generator should preserve existing alt text for images
+- generated `imageList.ts` and `videoList.ts` should stay in sync with processed assets
+
+## Diagrams
+
+![Overview](docs/arch/overview_v1.excalidraw.svg)
+![Image process](docs/arch/process_image_v1.excalidraw.svg)
+![Video process](docs/arch/process_video_v1.excalidraw.svg)
 
 ## What It Does
 
-`optimizeAssets()` performs the full asset pipeline:
+`assetsOptimize()` performs the full asset pipeline:
 
 1. Resolves the project name from `package.json.name`
 2. Uses that as the bucket base path on your `rclone` remote
@@ -33,9 +39,11 @@ It is designed for projects where:
 10. Uploads missing optimized images to R2 with cache headers
 11. Deletes stale optimized images from R2
 12. Runs a separate optional video pass from `videos` to `public/videos`
-13. Keeps video filenames unchanged and skips any processed video that already exists
-14. Uploads missing processed videos to R2 without deleting manual variants
-15. Prints a clear summary of what changed
+13. Generates a `.jpg` preview beside each processed video using the processed video dimensions
+14. Keeps video filenames unchanged and skips any processed video or preview that already exists
+15. Uploads missing processed videos and previews to R2 without deleting manual variants
+16. Generates `src/app/assets/imageList.ts` and `src/app/assets/videoList.ts` by default
+17. Prints a clear summary of what changed
 
 The hash is derived from:
 
@@ -79,7 +87,9 @@ videos/
 
 public/videos/
   hero.mp4
+  hero.jpg
   intro.webm
+  intro.jpg
 ```
 
 Video behavior:
@@ -88,7 +98,9 @@ Video behavior:
 - source videos sync through `video-originals`
 - processed videos sync through `video-processed`
 - missing processed videos are created with `ffmpeg`
+- missing preview images are created as `.jpg` files beside processed videos
 - existing processed videos are skipped and preserved as manual transformations
+- existing preview images are skipped and preserved
 - video filenames and relative paths are kept as-is
 - stale processed videos are not deleted
 
@@ -129,14 +141,22 @@ Supported video source extensions:
 
 ## Defaults
 
-If you call `optimizeAssets()` with no arguments, it uses:
+If you call `assetsOptimize()` with no arguments, it uses:
 
 - `cwd`: `process.cwd()`
 - `projectName`: `package.json.name`
+- `processImages`: `true`
 - `imageOriginalsDir`: `./images`
 - `imageOptimizedDir`: `./public/images`
+- `allowRootImageFiles`: `false`
+- `processVideos`: `true`
 - `videosDir`: `./videos`
 - `processedVideosDir`: `./public/videos`
+- `imageListOutputPath`: `./src/app/assets/imageList.ts`
+- `videoListOutputPath`: `./src/app/assets/videoList.ts`
+- `generateImageList`: `true`
+- `generateVideoList`: `true`
+- `videoPreviewQuality`: `80`
 - `rcloneRemote`: `leo`
 - `remoteImageOriginalsDir`: `image-originals`
 - `remoteImageOptimizedDir`: `image-processed`
@@ -154,42 +174,27 @@ So for a project named `moramontage`, the remote paths become:
 ## Installation
 
 ```bash
-bun add @adaptive-ds/optimize-images-web
-```
-
-If you also generate a typed image list afterward, install that separately in the consuming app:
-
-```bash
-bun add -d @adaptive-ds/generate-image-list
+bun add @adaptive-ds/assets-optimizer
 ```
 
 ## Basic Usage
 
-Keep the package generic and let each app own its own `imageList` import path.
-
 Example project entrypoint:
 
 ```ts
-import path from "node:path"
-import { imageList } from "@/app/images/imageList"
-import { generateImageList } from "@adaptive-ds/generate-image-list"
-import { optimizeAssets } from "@adaptive-ds/optimize-images-web"
+import { assetsOptimize } from "@adaptive-ds/assets-optimizer"
 
-const optimizedDir = path.resolve("public/images")
-const outFile = path.resolve("src/app/images/imageList.ts")
-
-await optimizeAssets()
-await generateImageList(optimizedDir, outFile, imageList)
+await assetsOptimize()
 ```
 
-This preserves existing `alt` text because the previous `imageList` is passed back into `generateImageList`.
+This generates optimized images, processed videos, video preview JPGs, `imageList.ts`, and `videoList.ts` in one run. Existing image alt text and existing video preview alt text are preserved when the generated files already exist.
 
 ## API
 
 ```ts
-import { optimizeAssets } from "@adaptive-ds/optimize-images-web"
+import { assetsOptimize } from "@adaptive-ds/assets-optimizer"
 
-const result = await optimizeAssets(options)
+const result = await assetsOptimize(options)
 ```
 
 ### `OptimizeImagesWebOptions`
@@ -198,10 +203,20 @@ const result = await optimizeAssets(options)
 interface OptimizeImagesWebOptions {
   cwd?: string
   projectName?: string
+  processImages?: boolean
   imageOriginalsDir?: string
   imageOptimizedDir?: string
+  allowRootImageFiles?: boolean
+  imageListOutputPath?: string
+  imageListImportPath?: string
+  generateImageList?: boolean
+  processVideos?: boolean
   videosDir?: string
   processedVideosDir?: string
+  videoListOutputPath?: string
+  videoListImportPath?: string
+  generateVideoList?: boolean
+  videoPreviewQuality?: number
   rcloneRemote?: string
   remoteImageOriginalsDir?: string
   remoteImageOptimizedDir?: string
@@ -225,17 +240,26 @@ interface OptimizeImagesWebResult {
   processedVideos: string[]
   skippedExistingVideos: string[]
   uploadedRemoteVideos: string[]
+  processedVideoPreviews: string[]
+  skippedExistingVideoPreviews: string[]
+  uploadedRemoteVideoPreviews: string[]
 }
 ```
 
 ## Example With Custom Paths
 
 ```ts
-import { optimizeAssets } from "@adaptive-ds/optimize-images-web"
+import { assetsOptimize } from "@adaptive-ds/assets-optimizer"
 
-await optimizeAssets({
+await assetsOptimize({
+  processImages: true,
   imageOriginalsDir: "./assets/originals",
   imageOptimizedDir: "./assets/optimized",
+  allowRootImageFiles: false,
+  imageListOutputPath: "./src/app/assets/imageList.ts",
+  processVideos: true,
+  videoListOutputPath: "./src/app/assets/videoList.ts",
+  videoPreviewQuality: 80,
   rcloneRemote: "leo",
   remoteImageOriginalsDir: "image-originals",
   remoteImageOptimizedDir: "image-processed",
@@ -292,8 +316,9 @@ That contract is what makes the output deterministic and safe to clean automatic
 
 This package is intended to be published from:
 
-- npm package: `@adaptive-ds/optimize-images-web`
-- repository: `david1gp/optimize-images-web`
+- npm package: `@adaptive-ds/assets-optimizer`
+- homepage: `https://github.com/david1gp/assets-optimizer`
+- generated asset lists import types from this package name by default unless you override `imageListImportPath` or `videoListImportPath`
 
 ## License
 
