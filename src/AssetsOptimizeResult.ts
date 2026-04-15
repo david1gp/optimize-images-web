@@ -4,12 +4,8 @@ export interface AssetsOptimizeResult {
   skippedRootFiles: string[]
   warnings: string[]
   deletedLocal: string[]
-  uploadedRemote: string[]
-  deletedRemote: string[]
   processedVideos: string[]
   skippedExistingVideos: string[]
-  uploadedRemoteVideos: string[]
   processedVideoPreviews: string[]
   skippedExistingVideoPreviews: string[]
-  uploadedRemoteVideoPreviews: string[]
 }

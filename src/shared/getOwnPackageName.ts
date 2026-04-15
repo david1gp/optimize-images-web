@@ -3,13 +3,23 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 export async function getOwnPackageName(moduleUrl: string): Promise<string> {
-  const modulePath = fileURLToPath(moduleUrl)
-  const packageJsonPath = path.resolve(path.dirname(modulePath), "..", "..", "package.json")
-  const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf8")) as { name?: string }
+  let currentDir = path.dirname(fileURLToPath(moduleUrl))
 
-  if (!packageJson.name) {
-    throw new Error(`package.json at ${packageJsonPath} is missing a name field`)
+  while (true) {
+    const packageJsonPath = path.join(currentDir, "package.json")
+
+    try {
+      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf8")) as { name?: string }
+      if (packageJson.name) {
+        return packageJson.name
+      }
+    } catch {}
+
+    const parentDir = path.dirname(currentDir)
+    if (parentDir === currentDir) {
+      throw new Error(`Could not resolve package name for ${moduleUrl}`)
+    }
+
+    currentDir = parentDir
   }
-
-  return packageJson.name
 }

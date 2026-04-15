@@ -5,9 +5,6 @@ export interface ProcessVideosOptions {
   cwd: string
   videoOriginalsDir: string
   videoOptimizedDir: string
-  remoteVideoOriginals?: string
-  remoteVideoProcessed?: string
-  cacheControlHeader: string
   videoPreviewQuality: number
   result: AssetsOptimizeResult
   logger: Logger
