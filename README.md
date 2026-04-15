@@ -19,8 +19,16 @@ It is designed for projects where:
 
 ## Diagrams
 
+### Overview
+
 ![Overview](docs/arch/overview_v1.excalidraw.svg)
+
+### Images
+
 ![Image process](docs/arch/process_image_v1.excalidraw.svg)
+
+### Videos
+
 ![Video process](docs/arch/process_video_v1.excalidraw.svg)
 
 ## What It Does
