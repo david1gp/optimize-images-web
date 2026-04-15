@@ -1,6 +1,6 @@
 # @adaptive-ds/assets-optimizer
 
-Process, hash, sync, and clean image assets for web projects that keep originals outside git and use R2 as the canonical store, with a separate pass for web videos.
+Process, hash, sync, and clean image assets for web projects that keep originals outside git and sync through any `rclone` remote, with a separate pass for web videos.
 
 This package is built for a workflow with two local directories:
 
@@ -11,7 +11,7 @@ This package is built for a workflow with two local directories:
 
 It is designed for projects where:
 
-- originals live in R2 and are synced locally
+- originals live on an `rclone` remote and are synced locally
 - optimized outputs should be deterministic and aggressively cacheable
 - output filenames should change when either the source file or the transform changes
 - old optimized files should be removed locally and remotely
@@ -28,20 +28,20 @@ It is designed for projects where:
 `assetsOptimize()` performs the full asset pipeline:
 
 1. Resolves the project name from `package.json.name`
-2. Uses that as the bucket base path on your `rclone` remote
-3. Syncs originals between R2 and `images`
+2. Uses that as the base path on your configured `rclone` remote
+3. Syncs originals between the remote and `images`
 4. Scans transform folders like `1920x1080_jpg`
 5. Processes matching image source files with `sharp`
 6. Writes flat optimized images into `public/images`
 7. Names image files as `<basename>_<hash>.<ext>`
 8. Skips already-generated images
 9. Deletes stale optimized images locally
-10. Uploads missing optimized images to R2 with cache headers
-11. Deletes stale optimized images from R2
+10. Uploads missing optimized images to the remote with cache headers
+11. Deletes stale optimized images from the remote
 12. Runs a separate optional video pass from `videos` to `public/videos`
 13. Generates a `.jpg` preview beside each processed video using the processed video dimensions
 14. Keeps video filenames unchanged and skips any processed video or preview that already exists
-15. Uploads missing processed videos and previews to R2 without deleting manual variants
+15. Uploads missing processed videos and previews to the remote without deleting manual variants
 16. Generates `src/app/assets/imageList.ts` and `src/app/assets/videoList.ts` by default
 17. Prints a clear summary of what changed
 
