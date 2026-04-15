@@ -1,8 +1,9 @@
 {
-  "name": "@adaptive-ds/optimize-images-web",
+  "name": "@adaptive-ds/assets-optimizer",
   "version": "0.1.0",
   "main": "./dist/index.js",
   "dependencies": {
+    "image-size": "^2.0.2",
     "sharp": "^0.34.5"
   },
   "devDependencies": {
@@ -22,7 +23,7 @@
     }
   },
   "description": "Process and sync web project images and videos between local folders and R2",
-  "homepage": "https://github.com/david1gp/optimize-images-web",
+  "homepage": "https://github.com/david1gp/assets-optimizer",
   "keywords": [
     "images",
     "image-optimization",
@@ -43,7 +44,7 @@
   "private": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/david1gp/optimize-images-web.git"
+    "url": "git+https://github.com/david1gp/assets-optimizer.git"
   },
   "scripts": {
     "build": "rm -rf ./dist && bun tsc -p ./tsconfig.lib.json",
