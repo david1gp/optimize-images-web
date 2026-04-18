@@ -17,7 +17,15 @@ export async function bisync(localPath: string, remotePath: string, options: Bis
   await fs.mkdir(localPath, { recursive: true })
   await runRclone(["mkdir", remotePath], cwd)
 
-  const args = ["bisync", localPath, remotePath, "--create-empty-src-dirs", "--resilient", "--recover"]
+  const args = [
+    "bisync",
+    localPath,
+    remotePath,
+    "--create-empty-src-dirs",
+    "--resilient",
+    "--recover",
+    "--ignore-listing",
+  ]
   if (options.resync === true || !localDirExists) {
     args.push("--resync")
   }
