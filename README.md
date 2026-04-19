@@ -2,20 +2,19 @@
 
 Process, hash, sync, and clean image assets for web projects that keep originals outside git and optionally sync through any `rclone` remote, with a separate pass for web videos.
 
-This package is built for a workflow with two local directories:
-
-- `images`: original source images, never modified
-- `public/images`: generated optimized images, flat output only
-- `videos`: original source videos, optional
-- `public/videos`: processed videos, optional
-
-It is designed for projects where:
+Features
 
 - originals may live on an `rclone` remote and be synced locally
 - optimized outputs should be deterministic and aggressively cacheable
 - output filenames should change when either the source file or the transform changes
 - old optimized files should be removed locally and remotely
-- generated `imageList.ts` and `videoList.ts` should stay in sync with processed assets
+- generates type-safe `imageList.ts` and `videoList.ts` should stay in sync with processed assets
+
+Quick link
+
+- code - https://github.com/david1gp/assets-optimizer
+- npm - https://www.npmjs.com/package/@adaptive-ds/assets-optimizer
+
 
 ## Diagrams
 
@@ -33,7 +32,13 @@ It is designed for projects where:
 
 ## What It Does
 
-`assetsOptimize()` performs the full asset pipeline:
+`processAssets()` orchestrates the full workflow:
+
+1. Syncs originals from remote source to local `images` and `videos` folders via `rclone bisync`
+2. Runs `assetsOptimize()` to process images and videos locally
+3. Uploads optimized assets to s3-compatible remote destination with caching headers
+
+`assetsOptimize()` performs the core asset processing:
 
 1. Resolves the project name from `package.json.name`
 2. If `rcloneRemote` is configured, uses that project name as the base path on the remote
@@ -69,7 +74,6 @@ Example:
 ```text
 images/
   1920x1080_jpg/
-    kitchen.jpg
     living-room.png
   1200x1200_webp/
     kitchen.jpg
@@ -125,12 +129,10 @@ Supported image output formats:
 - `jpg`
 - `png`
 - `webp`
-- `avif`
 Examples:
 
 - `1920x1080_jpg`
 - `1600x900_webp`
-- `800x800_avif`
 Image processing behavior:
 
 - resize fit: `inside` / max-bounds scaling
@@ -147,42 +149,10 @@ Supported video source extensions:
 - `avi`
 - `mkv`
 
-## Defaults
-
-If you call `assetsOptimize()` with no arguments, it uses:
-
-- `cwd`: `process.cwd()`
-- `projectName`: `package.json.name`
-- `processImages`: `true`
-- `imageOriginalsDir`: `./images`
-- `imageOptimizedDir`: `./public/images`
-- `allowRootImageFiles`: `false`
-- `processVideos`: `true`
-- `videoOriginalsDir`: `./videos`
-- `videoOptimizedDir`: `./public/videos`
-- `imageListOutputPath`: `./src/app/assets/imageList.ts`
-- `videoListOutputPath`: `./src/app/assets/videoList.ts`
-- `generateImageList`: `true`
-- `generateVideoList`: `true`
-- `videoPreviewQuality`: `80`
-- `rcloneRemote`: not set
-- `remoteImageOriginalsDir`: `image-originals`
-- `remoteImageOptimizedDir`: `image-processed`
-- `remoteVideoOriginalsDir`: `video-originals`
-- `remoteVideoProcessedDir`: `video-processed`
-- `cacheControlHeader`: `public,max-age=31536000,immutable`
-
-If you set `rcloneRemote` to `leo` for a project named `moramontage`, the remote paths become:
-
-- `leo:moramontage/image-originals`
-- `leo:moramontage/image-processed`
-- `leo:moramontage/video-originals`
-- `leo:moramontage/video-processed`
-
 ## Installation
 
 ```bash
-bun add @adaptive-ds/assets-optimizer
+bun add -D @adaptive-ds/assets-optimizer
 ```
 
 ## Basic Usage
@@ -190,110 +160,51 @@ bun add @adaptive-ds/assets-optimizer
 Example project entrypoint:
 
 ```ts
-import { assetsOptimize } from "@adaptive-ds/assets-optimizer"
+import { assetsProcess } from "@adaptive-ds/assets-optimizer"
 
-await assetsOptimize()
+await assetsProcess()
 ```
 
-This generates optimized images, processed videos, video preview JPGs, `imageList.ts`, and `videoList.ts` in one run. Existing image alt text and existing video preview alt text are preserved when the generated files already exist.
+This generates optimized images, processed videos, video preview JPGs, `imageList.ts`, and `videoList.ts` in one run. 
 
-When `rcloneRemote` is omitted, all remote sync, upload, and cleanup steps are skipped.
+Existing image alt text and existing video preview alt text are preserved when the generated files already exist.
 
-## API
+## Local folders
 
-```ts
-import { assetsOptimize } from "@adaptive-ds/assets-optimizer"
+This package is built for a workflow with two local directories:
 
-const result = await assetsOptimize(options)
-```
+- `images`: original source images, never modified
+- `public/images`: generated optimized images, flat output only
+- `videos`: original source videos, optional
+- `public/videos`: processed videos, optional
 
-### `OptimizeImagesWebOptions`
+## Optimization
 
-```ts
-interface OptimizeImagesWebOptions {
-  cwd?: string
-  projectName?: string
-  logLevel?: 0 | 1 | 2 | 3
-  processImages?: boolean
-  imageOriginalsDir?: string
-  imageOptimizedDir?: string
-  allowRootImageFiles?: boolean
-  imageListOutputPath?: string
-  imageListImportPath?: string
-  generateImageList?: boolean
-  processVideos?: boolean
-  videoOriginalsDir?: string
-  videoOptimizedDir?: string
-  videoListOutputPath?: string
-  videoListImportPath?: string
-  generateVideoList?: boolean
-  videoPreviewQuality?: number
-  rcloneRemote?: string
-  remoteImageOriginalsDir?: string
-  remoteImageOptimizedDir?: string
-  remoteVideoOriginalsDir?: string
-  remoteVideoProcessedDir?: string
-  cacheControlHeader?: string
-}
-```
+### Images
 
-`logLevel` controls runtime logging:
+- Source images live in transform folders like `1920x1080_jpg` inside `images/`
+- Each source file is resized to fit within the specified bounds without enlargement
+- Auto-rotation is applied based on EXIF data
+- Output quality defaults to 80%
+- Files are named using a hash of the source content and transform spec
+- Existing optimized files are skipped unless their source changed
+- Stale optimized files (from deleted sources or changed transforms) are removed
+- A TypeScript list file is generated with all processed image references
 
-- `0`: no logs
-- `1`: summary plus explicit worked-on files
-- `2`: level 1 plus all CLI calls
-- `3`: level 2 plus command output
+### Videos
 
-### `OptimizeImagesWebResult`
-
-```ts
-interface OptimizeImagesWebResult {
-  processed: string[]
-  skippedExisting: string[]
-  skippedRootFiles: string[]
-  warnings: string[]
-  deletedLocal: string[]
-  uploadedRemote: string[]
-  deletedRemote: string[]
-  processedVideos: string[]
-  skippedExistingVideos: string[]
-  uploadedRemoteVideos: string[]
-  processedVideoPreviews: string[]
-  skippedExistingVideoPreviews: string[]
-  uploadedRemoteVideoPreviews: string[]
-}
-```
-
-## Example With Custom Paths
-
-```ts
-import { assetsOptimize } from "@adaptive-ds/assets-optimizer"
-
-await assetsOptimize({
-  logLevel: 1,
-  processImages: true,
-  imageOriginalsDir: "./assets/originals",
-  imageOptimizedDir: "./assets/optimized",
-  allowRootImageFiles: false,
-  imageListOutputPath: "./src/app/assets/imageList.ts",
-  processVideos: true,
-  videoOriginalsDir: "./videos",
-  videoOptimizedDir: "./public/videos",
-  videoListOutputPath: "./src/app/assets/videoList.ts",
-  videoPreviewQuality: 80,
-  rcloneRemote: "leo",
-  remoteImageOriginalsDir: "image-originals",
-  remoteImageOptimizedDir: "image-processed",
-  cacheControlHeader: "public,max-age=31536000,immutable",
-})
-```
+- Source videos live directly in `videos/` (no transform folders)
+- Each video is copied to the output directory using `ffmpeg`
+- A JPEG preview is generated beside each processed video
+- Existing processed videos and previews are preserved as-is
+- A TypeScript list file is generated with all processed video references
 
 ## Requirements
 
 - `bun`
 - `rclone`
 - `ffmpeg`
-- an existing `rclone` remote, defaulting to `leo`
+- an existing `rclone` remote
 - write access to the target bucket/path
 - Node/Bun environment capable of running `sharp`
 
@@ -306,7 +217,7 @@ The package does not use a manifest.
 Instead it derives the expected output set from the current originals and current transform folders, then reconciles that against:
 
 - local `public/images`
-- remote `image-processed` objects
+- remote `images/optimized` objects
 
 That means:
 
@@ -332,14 +243,6 @@ images/1920x1080_jpg/
 ```
 
 That contract is what makes the output deterministic and safe to clean automatically.
-
-## Publishing
-
-This package is intended to be published from:
-
-- npm package: `@adaptive-ds/assets-optimizer`
-- homepage: `https://github.com/david1gp/assets-optimizer`
-- generated asset lists import types from this package name by default unless you override `imageListImportPath` or `videoListImportPath`
 
 ## License
 
