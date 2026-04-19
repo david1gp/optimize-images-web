@@ -6,8 +6,10 @@ import { shouldBisync } from "./utils/shouldBisync.js"
 
 export async function processAssets(options: ProcessAssetsOptions): Promise<void> {
   const {
-    remoteSource,
-    remoteDestination,
+    sourceImagesRemotePath,
+    sourceVideosRemotePath,
+    destImagesRemotePath,
+    destVideosRemotePath,
     cwd = process.cwd(),
     resync = false,
     processImages = true,
@@ -19,10 +21,6 @@ export async function processAssets(options: ProcessAssetsOptions): Promise<void
     imageListOutputPath = "./src/app/assets/imageList.ts",
     videoListOutputPath = "./src/app/assets/videoList.ts",
     assetsOptimizeLocallyFn,
-    sourceImagesFolder = "Bilder",
-    sourceVideosFolder = "Videos",
-    destImagesFolder = "images/optimized",
-    destVideosFolder = "videos/optimized",
     imageCacheControl = "Cache-Control:public, max-age=31536000, immutable",
     videoCacheControl = "Cache-Control:public, max-age=259200, immutable",
     logLevel,
@@ -34,16 +32,10 @@ export async function processAssets(options: ProcessAssetsOptions): Promise<void
     return
   }
 
-  const remoteSourcePrefix = options.remoteSourcePrefix ? `${options.remoteSourcePrefix}/` : ""
-  const remoteDestinationPrefix = options.remoteDestinationPrefix ? `${options.remoteDestinationPrefix}/` : ""
-
-  const resolvedRemoteSource = remoteSource.startsWith(":") ? remoteSource : `${remoteSource}`
-  const resolvedRemoteDestination = remoteDestination.startsWith(":") ? remoteDestination : `${remoteDestination}`
-
-  const sourceImages = `${resolvedRemoteSource}${remoteSourcePrefix}${sourceImagesFolder}`
-  const sourceVideos = `${resolvedRemoteSource}${remoteSourcePrefix}${sourceVideosFolder}`
-  const destImages = `${resolvedRemoteDestination}${remoteDestinationPrefix}${destImagesFolder}`
-  const destVideos = `${resolvedRemoteDestination}${remoteDestinationPrefix}${destVideosFolder}`
+  const sourceImages = sourceImagesRemotePath
+  const sourceVideos = sourceVideosRemotePath
+  const destImages = destImagesRemotePath
+  const destVideos = destVideosRemotePath
 
   const syncImages = processImages ? await shouldBisync(imageOriginalsDir, sourceImages) : false
   const syncVideos = processVideos ? await shouldBisync(videoOriginalsDir, sourceVideos) : false
