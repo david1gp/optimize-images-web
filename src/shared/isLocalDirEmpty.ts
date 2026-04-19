@@ -1,9 +1,9 @@
-import fs from "node:fs/promises"
+import { walkFiles } from "./walkFiles.js"
 
 export async function isLocalDirEmpty(dir: string): Promise<boolean> {
   try {
-    const entries = await fs.readdir(dir, { withFileTypes: true })
-    return entries.filter((e) => e.isFile()).length === 0
+    const files = await walkFiles(dir)
+    return files.length === 0
   } catch {
     return true
   }

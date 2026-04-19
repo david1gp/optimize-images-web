@@ -7,7 +7,16 @@ export async function isRemoteEmpty(remote: string): Promise<boolean> {
     stderr: "pipe",
   })
   const output = await new Response(proc.stdout).text()
-  await proc.exited
-  const result = JSON.parse(output) as { count: number }
-  return result.count === 0
+  const exitCode = await proc.exited
+
+  if (exitCode !== 0) {
+    return true
+  }
+
+  try {
+    const result = JSON.parse(output) as { count: number }
+    return result.count === 0
+  } catch {
+    return true
+  }
 }
