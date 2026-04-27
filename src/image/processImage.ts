@@ -21,7 +21,8 @@ export async function processImage(
       pipeline = pipeline.jpeg({ quality })
       break
     case "png":
-      pipeline = pipeline.png({ quality })
+      // PNG: use 100 to preserve original quality (lossless)
+      pipeline = pipeline.png({ quality: 100 })
       break
     case "webp":
       pipeline = pipeline.webp({ quality })
